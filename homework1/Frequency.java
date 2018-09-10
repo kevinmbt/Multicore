@@ -3,10 +3,6 @@ import java.util.Arrays;
 
 public class Frequency {
 
-	public static void main(String args[]){
-		System.out.println(parallelFreq(4,new int[] {4,4,4,4,4,1,2,3,4,4,12,3,2,3,4},3));
-	}
-
 	public static int parallelFreq(int x, int[] A, int numThreads){
 		int remainder = A.length % numThreads;
 		int divide = A.length / numThreads;
