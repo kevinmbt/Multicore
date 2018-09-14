@@ -1,7 +1,30 @@
+package q5;
+
 import java.util.concurrent.*;
 import java.util.Arrays;
 
-public class Frequency {
+public class Frequency implements Callable<Integer> {
+	private int x;
+	private int[] A;
+
+	public Frequency(int x, int[] A){
+		this.x = x;
+		this.A = A;
+	}
+
+	@Override
+	public Integer call() throws Exception {
+		int[] A = this.A;
+		int x = this.x;
+		int count = 0;
+		for(int a: A){
+			if(a == x){
+				count++;
+			}
+		}
+		return count;
+	}
+
 
 	public static int parallelFreq(int x, int[] A, int numThreads){
 		int remainder = A.length % numThreads;
@@ -15,7 +38,7 @@ public class Frequency {
 			int end_portion = current_loc + array_portion;
 			int[] chopped_array = Arrays.copyOfRange(A, current_loc, end_portion);
 			current_loc = end_portion;
-			Callable<Integer> freqcall = new FreqCall(x, chopped_array);	
+			Callable<Integer> freqcall = new Frequency(x, chopped_array);
 			future_task_array[i] = new FutureTask(freqcall);
 			future_task_array[i].run();
 		}
@@ -31,25 +54,25 @@ public class Frequency {
 	}
 }
 
-class FreqCall implements Callable<Integer>{
-	private int x;
-	private int[] A;
-
-	public FreqCall(int x, int[] A){
-		this.x = x;
-		this.A = A;
-	}
-
-	@Override
-	public Integer call() throws Exception {
-		int[] A = this.A;
-		int x = this.x;
-		int count = 0;
-		for(int a: A){
-			if(a == x){
-				count++;	
-			}
-		}
-		return count;
-	}
-}
+//class FreqCall implements Callable<Integer>{
+//	private int x;
+//	private int[] A;
+//
+//	public FreqCall(int x, int[] A){
+//		this.x = x;
+//		this.A = A;
+//	}
+//
+//	@Override
+//	public Integer call() throws Exception {
+//		int[] A = this.A;
+//		int x = this.x;
+//		int count = 0;
+//		for(int a: A){
+//			if(a == x){
+//				count++;
+//			}
+//		}
+//		return count;
+//	}
+//}
