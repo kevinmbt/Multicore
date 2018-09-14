@@ -33,8 +33,6 @@ public class PIncrement{
 			}
 			long atomicend = System.nanoTime();
 			// End Time Atomic
-			System.out.println("Atomic Time for " +numThreads+ " threads:: " +
-								(atomicend-atomicstart));
 			
 			Integer synchronizedInt = new Integer(0);
 			SynchronizedIncrement[] threadListSynchronized =
@@ -60,8 +58,7 @@ public class PIncrement{
 			}
 			long synchronizedend = System.nanoTime();
 			// End Timer Synchronized
-			System.out.println("Synchronized Time for " +numThreads+ " threads:: " +
-								(synchronizedend-synchronizedstart));
+			System.out.print(synchronizedend-synchronizedstart+",");
 			final ReentrantLock lock = new ReentrantLock();
 			Integer reentrantInt = new Integer(0);
 			ReentrantIncrement[] threadListReentrant = 
@@ -85,10 +82,31 @@ public class PIncrement{
 				}
 			}
 			long reentrantend = System.nanoTime();
-			System.out.println("Reentrant Time for " +numThreads+ " threads:: " +
-								(reentrantend-reentrantstart));
 
 			// End Time Reentrant Lock
+
+		/*	final Tournament t = new Tournament();
+			Integer tournamentInt = new Integer(0);
+			TournamentIncrement[] threadListTournament = new
+							TournamentIncrement[numThreads];
+			long tournamentstart = System.nanoTime();
+			for(int j = 0; j < numThreads;j++){
+				int incrementBy = (j < remainder) ? incrementPerThread+1 :
+																incrementPerThread;
+				spinupTournament(tournamentInt, incrementBy, t, 
+										threadListTournament, j);
+			}
+			for(int j = 0; j < numThreads; j++){
+				try{
+					threadListTournament[j].join();
+				}
+				catch(Exception e){
+					
+				}
+			}
+			long tournamentend = System.nanoTime();
+*/
+			
 		return 0;
 
 	}
@@ -117,6 +135,16 @@ public class PIncrement{
 		threadList[listLoc] = new ReentrantIncrement(c, incrementNumber, lock);
 		threadList[listLoc].start();
 	}
+
+	private static void spinupTournament(Integer c,
+													int incrementNumber,
+													Tournament t,
+													TournamentIncrement[] threadList,
+													int listLoc){
+		threadList[listLoc] = new TournamentIncrement(c,incrementNumber,t,listLoc);
+		threadList[listLoc].start();
+	}
+
 }
 
 class AtomicIncrement extends Thread{
@@ -132,7 +160,10 @@ class AtomicIncrement extends Thread{
 	public void run(){
 		for(int i = 0; i < incrementNumber; i++){
 			int expected = c.get();
-			c.compareAndSet(expected, expected+1);
+			boolean prev = c.compareAndSet(expected, expected+1);
+			if(!prev){
+				i--;
+			}
 		}
 	}
 }
@@ -178,5 +209,85 @@ class ReentrantIncrement extends Thread{
 				lock.unlock();
 			}
 		}
+	}
+}
+
+class TournamentIncrement extends Thread{
+	private Integer c;
+	private int incrementNumber;
+	private Tournament tournament;
+	private int myThread;
+
+	public TournamentIncrement(Integer c, int incrementNumber, Tournament tournament, int myThread){
+		this.c = c;
+		this.incrementNumber = incrementNumber;
+		this.tournament = tournament;
+		this.myThread = myThread;
+	}
+
+	@Override
+	public void run(){
+		for(int i = 0; i < incrementNumber; i++){
+			tournament.lock1(myThread);
+			tournament.lock2(myThread);
+			tournament.lock3(myThread);
+			c++;
+			tournament.unlock(myThread);
+		}
+	}
+}
+
+class Tournament{
+	private int[] locks = new int[8];
+
+	private boolean[] flag = new boolean[8];
+	private int[] victim = new int[8];
+	public void lock1(int i) {
+		int j;
+		if(i%2 == 1){
+			j = i-1;
+		}
+		else{
+			j = i+1;
+		}
+		flag[i] = true;
+		// I’m interested
+		victim[i/2] = i;
+		// you go first
+		while( (flag[j] && victim[i/2] == i)) {
+			}; // wai	t
+		locks[i/2] = i;
+	}
+	public void lock2(int i){
+		int j;
+		if((i/2)%2 == 1){
+			j = locks[i/2-1];
+		}
+		else{
+			j = locks[i/2+1];
+		}
+		flag[i] = true;
+		victim[i/2+1+i/4] = i;
+		while(flag[j] && victim[i/2+1+i/4] == i){
+		};
+		locks[i/2+1+i/4] = i;
+	}
+	public void lock3(int i){
+		int j;
+		if((i/4) == 0){
+			j = locks[6];
+		}
+		else{
+			j = locks[5];
+		}
+		flag[i] = true;
+		victim[7] = i;
+		while(flag[j] && victim[7] == i){
+		};
+		locks[7] = i;
+	}
+	public void unlock(int i) {	
+		flag[i] = false;
+		// I’m not interested
 	}
 }
