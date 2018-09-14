@@ -82,7 +82,6 @@ public class PIncrement{
 			}
 			long reentrantend = System.nanoTime();
 
-			System.out.print(reentrantend-reentrantstart+",");
 			// End Time Reentrant Lock
 			final Tournament t = new Tournament();
 			Integer tournamentInt = new Integer(0);
@@ -212,9 +211,9 @@ class ReentrantIncrement extends Thread{
 
 class TournamentIncrement extends Thread{
 	private Integer c;
-	private int incrementNumber;
+	private volatile int incrementNumber;
 	private Tournament tournament;
-	private int myThread;
+	private volatile int myThread;
 
 	public TournamentIncrement(Integer c, int incrementNumber, Tournament tournament, int myThread){
 		this.c = c;
@@ -226,23 +225,24 @@ class TournamentIncrement extends Thread{
 	@Override
 	public void run(){
 		for(int i = 0; i < incrementNumber; i++){
+			try{	
 			tournament.lock1(myThread);
-			if(i == 10){
-				System.out.println("Made it through "+c+" the first");	
-			}
 			tournament.lock2(myThread);
 			tournament.lock3(myThread);
 			c++;
-			tournament.unlock(myThread);
+			}
+			finally{
+				tournament.unlock(myThread);
+			}
 		}
 	}
 }
 
 class Tournament{
-	private int[] locks = new int[]{-1,-1,-1,-1,-1,-1,-1};
+	private volatile int[] locks = new int[]{-1,-1,-1,-1,-1,-1,-1};
 
-	private boolean[] flag = new boolean[8];
-	private int[] victim = new int[7];
+	private volatile boolean[] flag = new boolean[8];
+	private volatile int[] victim = new int[7];
 	public void lock1(int i) {
 		int j;
 		if(i%2 == 1){
@@ -262,16 +262,16 @@ class Tournament{
 	public void lock2(int i){
 		int j;
 		if((i/2)%2 == 1){
-			j = locks[i/2-1];
+			j = locks[(i/2)-1];
 		}
 		else{
-			j = locks[i/2+1];
+			j = locks[(i/2)+1];
 		}
 		flag[i] = true;
-		victim[4+i/4] = i;
-		while(j!=-1 && flag[j] && victim[4+i/4] == i){
+		victim[4+(i/4)] = i;
+		while(j!=-1 && flag[j] && victim[4+(i/4)] == i){
 		};
-		locks[4+i/4] = i;
+		locks[4+(i/4)] = i;
 	}
 	public void lock3(int i){
 		int j;
@@ -283,11 +283,14 @@ class Tournament{
 		}
 		flag[i] = true;
 		victim[6] = i;
-		while(j!= -1 && flag[j] && victim[7] == i){
+		while(j!= -1 && flag[j] && victim[6] == i){
 		};
 		locks[6] = i;
 	}
 	public void unlock(int i) {	
+		locks[i/2] = -1;
+		locks[4+(i/4)] = -1;
+		locks[6] = -1;
 		flag[i] = false;
 		
 		// I’m not interested
